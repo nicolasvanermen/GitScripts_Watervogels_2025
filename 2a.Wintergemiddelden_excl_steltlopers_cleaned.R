@@ -1,5 +1,6 @@
 library(tidyverse)
 library(INBOtheme)
+library(zoo)
 # theme_set(theme_inbo(base_size = 12, transparent = FALSE))
 conflicted::conflict_prefer("filter", "dplyr")
 
@@ -306,3 +307,40 @@ b6a.Totaal_ZS_Gebiedsklassen <- ggplot() +
 
 b6a.Totaal_ZS_Gebiedsklassen
 f_save_graph(b6a.Totaal_ZS_Gebiedsklassen)
+
+
+######################
+# 7 Aantallen vs IHD
+######################
+Tot_Telling_ESTUARIUM <- Tellingen_ZS %>% 
+  filter(Groepscode != "S", Gebiedsklasse == "Estuarium") %>%  
+  mutate(Gebiedsklasse = "Estuarium") %>% 
+  group_by(Gebiedsklasse, Telseizoen_num, Telling) %>% 
+  summarise(aantal = sum(Aantal)) 
+
+Tot_Telling_SIGMA_ESTUARIUM <- Tellingen_ZS %>% 
+  filter(Groepscode != "S", Gebiedsklasse %in% c("Estuarium","Sigmagebied")) %>%  
+  mutate(Gebiedsklasse = "Estuarium + Sigma") %>%  
+  group_by(Gebiedsklasse, Telseizoen_num, Telling) %>% 
+  summarise(aantal = sum(Aantal)) 
+
+Tot_Telling_rbind <- rbind(Tot_Telling_ESTUARIUM, Tot_Telling_SIGMA_ESTUARIUM)
+
+Tot_Telling_summary <- Tot_Telling_rbind %>%
+  group_by(Gebiedsklasse, Telseizoen_num) %>% 
+  summarise(Wintermean = mean(aantal)) %>% 
+  mutate(Moving_wintermean = rollmean(Wintermean, k = 5, fill = NA, align = "right"))
+Tot_Telling_summary
+
+b7.IHD <- ggplot() + 
+  geom_point(data = Tot_Telling_summary, aes(x = Telseizoen_num, y = Moving_wintermean, col = Gebiedsklasse), size = 0.5) + 
+  geom_smooth(data = Tot_Telling_summary, aes(x = Telseizoen_num, y = Moving_wintermean, col = Gebiedsklasse, fill = Gebiedsklasse), linewidth = 0.25, alpha = 0.3) +
+  geom_hline(yintercept = 40000, colour = "black", linetype="dashed") +
+  scale_x_continuous(breaks = seq(from = 1991, to = 2023, by = 2)) +
+  scale_y_continuous(labels = scales::number, limits = c(0, 50000)) + 
+  f_labs_totaal("IHD Estuarium\n(voortschrijdend gemiddelde - 5 jaar)") + 
+  theme_bw() +
+  f_graph_theme()
+
+b7.IHD
+f_save_graph(b7.IHD)
