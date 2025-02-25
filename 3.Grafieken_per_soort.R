@@ -4,7 +4,7 @@ library(INBOtheme)
 conflicted::conflict_prefer("filter", "dplyr")
 
 ### functies opvragen
-source("./Scripts/Functies watervogel grafieken.R")
+source("./GitScripts/Functies_WV_grafieken.R")
 
 ##################
 # 1 DATA INLEZEN
@@ -132,7 +132,7 @@ for (i in Species12[!Species12 %in% c("Kievit")])
     geom_point(size = 0.5) + geom_smooth(linewidth = 0.25, alpha = 0.3) +
     scale_x_continuous(breaks = seq(from = 1991, to = 2023, by = 2)) + 
     scale_y_continuous(labels = scales::percent_format(scale = 100)) +
-    labs(title = paste(Soort, "\n(Sigmagebieden tov Zeeschelde-vallei)", sep = ""), y = "Percentage", x = element_blank()) +
+    labs(title = paste(Soort, " (Sigmagebieden tov Zeeschelde-vallei)", sep = ""), y = "Percentage", x = element_blank()) +
     theme_bw() +
     theme(legend.text = element_text(size = 7)) +
     f_graph_theme() 
@@ -144,7 +144,7 @@ for (i in Species12[!Species12 %in% c("Kievit")])
     geom_point(size = 0.5) + geom_smooth(linewidth = 0.25, alpha = 0.3) +
     scale_x_continuous(breaks = seq(from = 1991, to = 2023, by = 2)) + 
     scale_y_continuous(labels = scales::percent_format(scale = 100)) +
-    labs(title = paste(Soort, "\n(Sigmagebieden tov Vlaanderen)", sep = ""), y = "Percentage", x = element_blank()) +
+    labs(title = paste(Soort, " (Sigmagebieden tov Vlaanderen)", sep = ""), y = "Percentage", x = element_blank()) +
     theme_bw() +
     theme(legend.text = element_text(size = 7)) +
     f_graph_theme() 
@@ -192,15 +192,15 @@ for (i in Species12[!Species12 %in% c("Kievit")])
 
 
 ##########################################
-# 2b Grafieken per soort (Kievit)
+# 2b Grafieken per soort (Kievit & Wulp)
 ##########################################
-for (i in Species12[Species12 %in% c("Kievit")])
+for (i in c("Kievit", "Wulp"))
 {
   Soort <- i
   OutputLocationName <- paste("./Graphs/Grafieken ", Soort, sep = "")
   
-  if (!file.exists(paste(OutputLocationName, sep = "/"))) {
-    dir.create(paste(OutputLocationName, sep = "/")) }
+  if (!file.exists(OutputLocationName)) {
+    dir.create(OutputLocationName) }
   
   ### soortselectie maken
   Tellingen_VL_Soort <- WV_DB %>% filter(NedNaam == Soort,
@@ -228,8 +228,7 @@ for (i in Species12[Species12 %in% c("Kievit")])
   ### alles samenzetten:
   Winter_Means <- left_join(left_join(Winter_Means_Sigma %>% arrange(Telseizoen_num),
                                       Winter_Means_ZS %>% arrange(Telseizoen_num), by = "Telseizoen_num"), 
-                            Winter_Means_VL %>% arrange(Telseizoen_num), 
-                            by = "Telseizoen_num") %>%
+                            Winter_Means_VL %>% arrange(Telseizoen_num), by = "Telseizoen_num") %>%
     rename(Mean_Sigma = Mean.x,
            Mean_ZS = Mean.y,
            Mean_VL = Mean) %>%
@@ -267,7 +266,7 @@ for (i in Species12[Species12 %in% c("Kievit")])
     geom_point(size = 0.5) + geom_smooth(linewidth = 0.25, alpha = 0.3) +
     scale_x_continuous(breaks = seq(from = 1999, to = 2023, by = 2)) + 
     scale_y_continuous(labels = scales::percent_format(scale = 100)) +
-    labs(title = paste(Soort, "\n(Sigmagebieden tov Zeeschelde-vallei)", sep = ""), y = "Percentage", x = element_blank()) +
+    labs(title = paste(Soort, " (Sigmagebieden tov Zeeschelde-vallei)", sep = ""), y = "Percentage", x = element_blank()) +
     theme_bw() +
     theme(legend.text = element_text(size = 7)) +
     f_graph_theme() 
@@ -279,7 +278,7 @@ for (i in Species12[Species12 %in% c("Kievit")])
     geom_point(size = 0.5) + geom_smooth(linewidth = 0.25, alpha = 0.3) +
     scale_x_continuous(breaks = seq(from = 1999, to = 2023, by = 2)) + 
     scale_y_continuous(labels = scales::percent_format(scale = 100)) +
-    labs(title = paste(Soort, "\n(Sigmagebieden tov Vlaanderen)", sep = ""), y = "Percentage", x = element_blank()) +
+    labs(title = paste(Soort, " (Sigmagebieden tov Vlaanderen)", sep = ""), y = "Percentage", x = element_blank()) +
     theme_bw() +
     theme(legend.text = element_text(size = 7)) +
     f_graph_theme() 

@@ -4,7 +4,7 @@ library(INBOtheme)
 conflicted::conflict_prefer("filter", "dplyr")
 
 ### functies opvragen
-source("./Scripts/Functies watervogel grafieken.R")
+source("./GitScripts/Functies_WV_grafieken.R")
 
 ##################
 # 1 DATA INLEZEN
