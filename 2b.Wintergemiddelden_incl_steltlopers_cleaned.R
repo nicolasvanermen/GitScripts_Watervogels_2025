@@ -10,7 +10,7 @@ source("./GitScripts/Functies_WV_grafieken.R")
 # 1 DATA INLEZEN
 ##################
 
-WV_DB <- read.csv("./Data/WV_DB_2025-01-23.csv")
+WV_DB <- read_csv("./Data/WV_DB_2025-01-23.csv")
 Gebieden_ZS <- read_csv("./Data/Gebieden2 herwerking Wim.csv")
 ### dit is de aangepaste gebieden-file doorgemaild door Wim op 31-01-2025
 
