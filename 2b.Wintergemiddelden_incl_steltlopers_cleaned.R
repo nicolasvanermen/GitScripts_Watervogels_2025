@@ -52,8 +52,8 @@ WV_DB %>% filter(Gebied == "Poldercomplex OOSTKERKE") %>%
   filter(str_detect(NedNaam, "gans")|str_detect(NedNaam, "Gans"))
 ### Geen inheemse ganzen! Dit betekent dat de Analysesetkey selectie "F.Analysesetkey in (2, 3, 4)" in 1 beweging
 ### de juiste soorten voor de juiste gebieden selecteert; de onderstaande filter op ProjectCode lijkt mij daarom verkeerd!!
-### -> nagevraagd bij Wim
-WV_DB <- WV_DB %>% filter(ProjectCode %in% c("MIDMA","ZSCH"))
+### -> nagevraagd bij Frederic: de filtering op projectcode is idd foutief (in deze context) en wordt bij deze gedeactiveerd:
+# WV_DB <- WV_DB %>% filter(ProjectCode %in% c("MIDMA","ZSCH"))
 
 ### check:
 nrow(WV_DB) == 764930
@@ -170,7 +170,7 @@ b5b.Totaal_ZS_VL <- ggplot() +
   geom_point(data = Tot_Telling_ZS_VL, aes(x = Telseizoen_num, y = value, colour = name), size = 0.5) + 
   geom_smooth(data = Tot_Telling_ZS_VL, aes(x = Telseizoen_num, y = value, colour = name, fill = name), linewidth = 0.25, alpha = 0.3) + 
   scale_x_continuous(breaks = seq(from = 1999, to = 2023, by = 2)) +
-  scale_y_continuous(labels = scales::number, limits = c(0, 320000)) + 
+  scale_y_continuous(labels = scales::number, limits = c(0, 370000)) + 
   scale_colour_manual(values = c("yellow4","orangered3"), labels = c("Vlaanderen", "Zeeschelde-vallei"), name = NULL) +
   scale_fill_manual(values = c("yellow4","orangered3"), labels = c("Vlaanderen", "Zeeschelde-vallei"), name = NULL) +
   labs(title = "Zeeschelde-vallei & Vlaanderen: wintergemiddelden\n(incl. steltlopers)", y = "Aantal watervogels", x = element_blank()) +

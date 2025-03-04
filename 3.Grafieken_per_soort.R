@@ -44,8 +44,8 @@ Tellingen_ZS %>% count(Cluster)
 WV_DB <- WV_DB %>% 
   mutate(Telseizoen_num = as.numeric(str_sub(Telseizoen, 1, 4))) %>% 
   filter(Groep != "Meeuwen en Sternen",
-         Telseizoen_num > 1990 & Telseizoen_num < 2024,
-         ProjectCode %in% c("MIDMA","ZSCH"))
+         Telseizoen_num > 1990 & Telseizoen_num < 2024)
+         # ProjectCode %in% c("MIDMA","ZSCH"))
 
 ### check:
 nrow(WV_DB) == 866177

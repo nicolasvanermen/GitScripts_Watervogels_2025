@@ -47,8 +47,8 @@ WV_DB %>% filter(Gebied == "Poldercomplex OOSTKERKE") %>%
   filter(str_detect(NedNaam, "gans")|str_detect(NedNaam, "Gans"))
 ### Geen inheemse ganzen! Dit betekent dat de Analysesetkey selectie "F.Analysesetkey in (2, 3, 4)" in 1 beweging
 ### de juiste soorten voor de juiste gebieden selecteert; de onderstaande filter op ProjectCode lijkt mij daarom verkeerd!!
-### -> nagevraagd bij Wim
-WV_DB <- WV_DB %>% filter(ProjectCode %in% c("MIDMA","ZSCH"))
+### -> nagevraagd bij Frederic: de filtering op projectcode is idd foutief (in deze context) en wordt bij deze gedeactiveerd:
+# WV_DB <- WV_DB %>% filter(ProjectCode %in% c("MIDMA","ZSCH"))
 
 ### check:
 nrow(WV_DB) == 866177
