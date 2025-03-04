@@ -1,5 +1,6 @@
 library(tidyverse)
 library(INBOtheme)
+library(DBI)
 # theme_set(theme_inbo())
 conflicted::conflict_prefer("filter", "dplyr")
 
@@ -10,27 +11,24 @@ source("./GitScripts/Functies_WV_grafieken.R")
 # 1 DATA INLEZEN
 #################
 WV_DB <- read_csv("./Data/WV_DB_2025-01-23.csv")
-Gebieden_ZS <- read_csv("./Data/Gebieden2 herwerking Wim.csv")
-Gebieden_WVDB <- read_csv("./Data/FctLocationGroup_info - herwerking NV.csv")
+WV_DB <- WV_DB %>% rename(LocationWVNaam = Gebied) 
 
-### check het voorkomen van gebiedsnamen in beide tabellen:
-Gebieden_WVDB %>% count(LocationWVNaam) %>% summary()
-Gebieden_WVDB %>% count(LocationGroupNaam)
+con <- inbodb::connect_inbo_dbase("W0004_00_Waterbirds")
 
-Gebieden_WVDB_rev <- Gebieden_WVDB %>% filter(!LocationGroupNaam %in% c("Linkeroever","Rechteroever"))
-Gebieden_WVDB_rev %>% count(LocationWVNaam) %>% summary()
-
-Gebieden_ZS %>% count(Gebied) %>% summary()
-
-Gebieden_ZS %>% filter(!Gebied %in% Gebieden_WVDB_rev$LocationWVNaam) %>% pull(Gebied) %>% sort()
-Gebieden_WVDB_rev %>% filter(!LocationWVNaam %in% Gebieden_ZS$Gebied) %>% pull(LocationWVNaam) %>% sort()
-
-### een gelijkaardige bewerking kan ook via anti_join, nu tussen gebiedstabellen en WV_DB:
-Gebieden_ZS %>% anti_join(WV_DB, by = c("Gebied")) %>% 
-  select(Gebied) %>% pull()
-
-Gebieden_WVDB_rev %>% anti_join(WV_DB, by = c("LocationWVNaam" = "Gebied")) %>% 
-  select(LocationWVNaam) %>% pull()
+Gebieden_ZS <- dbGetQuery(con,
+"select LocationGroupCode
+, LocationGroupNaam
+, LocationGroupTypeCode
+, LocationGroupTypeNaam
+, LocationWVCode
+, LocationWVNaam
+, StartDate
+, EndDate
+from [dbo].[FactLocationGroup]
+where 1 = 1
+AND IsDeleted = 0
+AND LocationGroupCode in ('ZS','ZR','ZSVAL','SEST','WETL','NOH')"
+)
 
 ###########################
 # 2 Wrangle Prosperpolder
@@ -42,7 +40,7 @@ Prosper_N <- read_csv("./Data/Prosperpolder Noord 2013-2024.csv")
 Prosper_Z %>% distinct(family)
 
 Prosper_Z <- Prosper_Z %>% 
-  rename(Gebied = location,
+  rename(LocationWVNaam = location,
          NedNaam = `species name`,
          Teldatum = date,
          Aantal = number,
@@ -59,10 +57,10 @@ Prosper_Z <- Prosper_Z %>%
          Groep = case_match(Groep, 
                               "Meeuwen, Sterns en Schaarbekken (Laridae)" ~ "Meeuwen en Sternen", .default = Groep),
          LocationGroupNaam = "Sigma-Wetland") %>% 
-  select(Gebied, LocationGroupNaam, Teldatum, Telseizoen_num, Telling, NedNaam, Aantal, Groep)
+  select(LocationWVNaam, LocationGroupNaam, Teldatum, Telseizoen_num, Telling, NedNaam, Aantal, Groep)
 
 Prosper_N <- Prosper_N %>% 
-  rename(Gebied = location,
+  rename(LocationWVNaam = location,
          NedNaam = `species name`,
          Teldatum = date,
          Aantal = number,
@@ -79,7 +77,7 @@ Prosper_N <- Prosper_N %>%
          Groep = case_match(Groep, 
                             "Meeuwen, Sterns en Schaarbekken (Laridae)" ~ "Meeuwen en Sternen", .default = Groep),
          LocationGroupNaam = "Sigma-Estuarien") %>% 
-  select(Gebied, LocationGroupNaam, Teldatum, Telseizoen_num, Telling, NedNaam, Aantal, Groep)
+  select(LocationWVNaam, LocationGroupNaam, Teldatum, Telseizoen_num, Telling, NedNaam, Aantal, Groep)
 
 Prosper_Z %>% glimpse()
 Prosper_N %>% glimpse()
@@ -92,35 +90,21 @@ Prosper <- rbind(Prosper_N, Prosper_Z)
 #########################
 # 3 Wrangle gebiedsfile
 #########################
-Gebieden_ZS <- left_join(Gebieden_ZS, Gebieden_WVDB_rev %>% select(LocationWVNaam, LocationGroupNaam),
-                         by = c("Gebied" = "LocationWVNaam"))
 
-### checks:
-Gebieden_ZS %>% distinct(LocationGroupNaam)
-Gebieden_ZS %>% filter(Sigma == 1) %>% distinct(LocationGroupNaam)
-Gebieden_ZS %>% mutate(test = str_detect(LocationGroupNaam, "Sigma")) %>% filter(test == TRUE) %>% distinct(Sigma)
+Prosper %>% group_by(LocationWVNaam, LocationGroupNaam) %>% summarise()
 
-Prosper %>% group_by(Gebied, LocationGroupNaam) %>% summarise()
-
-Gebieden_ZS_wrangled <- bind_rows(Gebieden_ZS, Prosper %>% group_by(Gebied, LocationGroupNaam) %>% summarise())
-Gebieden_ZS_wrangled %>% count(Gebied) %>% summary()
+Gebieden_ZS_wrangled <- bind_rows(Gebieden_ZS, Prosper %>% group_by(LocationWVNaam, LocationGroupNaam) %>% summarise())
+Gebieden_ZS_wrangled %>% count(LocationWVNaam) %>% summary()
 # write_csv(Gebieden_ZS, "./Data/Gebieden_wrangled.csv")
-
-# #testjes rond count / n / length
-# Gebieden_ZS %>% count(Cluster)
-# Gebieden_ZS %>% group_by(Cluster) %>% summarise(n = n())
-# Gebieden_ZS %>% summarise(n = n(), .by = Cluster)
-# #wat ook werkt maar het allerminst elegant is:
-# Gebieden_ZS %>% group_by(Cluster) %>% summarise(n = length(Cluster))
-
 
 #########################
 # 4 Wrangle WV_DB
 #########################
-WV_DB %>% filter(Gebied == "Prosperpolder DOEL") %>% count(Gebied, Telseizoen)
+
+WV_DB %>% filter(LocationWVNaam == "Prosperpolder DOEL") %>% count(LocationWVNaam, Telseizoen)
 WV_DB <- WV_DB %>% mutate(Telseizoen_num = as.numeric(str_sub(Telseizoen, 1, 4)))
 
-cbind(WV_DB %>% filter(Gebied == "Prosperpolder DOEL", Telseizoen_num > 2012) %>% 
+cbind(WV_DB %>% filter(LocationWVNaam == "Prosperpolder DOEL", Telseizoen_num > 2012) %>% 
   group_by(NedNaam) %>% 
   summarise(Sum = sum(Aantal)) %>% arrange(desc(Sum)) %>% head(n = 20),
 Prosper %>% filter(NedNaam != "Canadese Gans onbekend") %>% 
@@ -128,12 +112,13 @@ Prosper %>% filter(NedNaam != "Canadese Gans onbekend") %>%
   summarise(Sum = sum(Aantal)) %>% arrange(desc(Sum))%>% head(n = 20))
 ### toch wel wat verschil...
 
-WV_DB_select <- WV_DB %>% filter(!(Gebied == "Prosperpolder DOEL" & Telseizoen_num > 2012))
+WV_DB_select <- WV_DB %>% 
+  filter(!(LocationWVNaam == "Prosperpolder DOEL" & Telseizoen_num > 2012)) 
 WV_DB_Prosper <- bind_rows(WV_DB_select, 
                            Prosper %>%
                              select(!LocationGroupNaam))
 WV_DB_Prosper %>% glimpse()
-WV_DB_Prosper %>% filter(Gebied == "Doel - Prosperpolder Noord") %>% glimpse()
+WV_DB_Prosper %>% filter(LocationWVNaam == "Doel - Prosperpolder Noord") %>% glimpse()
 # write_csv(WV_DB_Prosper, "./Data/WV_DB_Prosper_wrangled.csv")
 
 #########################
@@ -141,7 +126,7 @@ WV_DB_Prosper %>% filter(Gebied == "Doel - Prosperpolder Noord") %>% glimpse()
 #########################
 
 Tellingen_ZS <- WV_DB_Prosper %>% 
-  right_join(Gebieden_ZS_wrangled, by = c("Gebied" = "Gebied")) %>% 
+  right_join(Gebieden_ZS_wrangled, by = c("LocationWVNaam" = "LocationWVNaam")) %>% 
   filter(Groep != "Meeuwen en Sternen",
          Telseizoen_num > 1998 & Telseizoen_num < 2024)
 
@@ -166,11 +151,11 @@ b1c.Totaal_Sigma
 f_save_graph(b1c.Totaal_Sigma)
 
 ### Prosperpolder DOEL omzetten naar Sigma - estuarien ipv wetland
-Tellingen_ZS %>% filter(Gebied == "Prosperpolder DOEL") %>% distinct(LocationGroupNaam)
+Tellingen_ZS %>% filter(LocationWVNaam == "Prosperpolder DOEL") %>% distinct(LocationGroupNaam)
 
 Tellingen_ZS_alt <- Tellingen_ZS %>% 
-  mutate(LocationGroupNaam = case_when(Gebied == "Prosperpolder DOEL" ~ "Sigma-Estuarien", .default = LocationGroupNaam))
-Tellingen_ZS_alt %>% filter(Gebied == "Prosperpolder DOEL") %>% distinct(LocationGroupNaam)
+  mutate(LocationGroupNaam = case_when(LocationWVNaam == "Prosperpolder DOEL" ~ "Sigma-Estuarien", .default = LocationGroupNaam))
+Tellingen_ZS_alt %>% filter(LocationWVNaam == "Prosperpolder DOEL") %>% distinct(LocationGroupNaam)
 
 Tellingen_ZS_alt %>% count(LocationGroupNaam)
 Tellingen_ZS %>% count(LocationGroupNaam)

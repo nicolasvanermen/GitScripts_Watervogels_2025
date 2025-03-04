@@ -18,27 +18,27 @@ f_graph_theme <- function(){
 f_save_graph <- function(plotname){
   ggsave(
     plotname,
-    filename = paste(deparse(substitute(plotname)), "(5).png", sep = ""), 
+    filename = paste(deparse(substitute(plotname)), "(6).png", sep = ""), 
     path = "./graphs/Grafieken Algemeen",
     width = 15, height = 10, units = "cm", dpi = 300)}
 
 f_save_wide_graph <- function(plotname){
   ggsave(
     plotname,
-    filename = paste(deparse(substitute(plotname)), "(5).png", sep = ""), 
+    filename = paste(deparse(substitute(plotname)), "(6).png", sep = ""), 
     path = "./graphs/Grafieken Algemeen",
     width = 18, height = 10, units = "cm", dpi = 300)}
 
 f_save_graph_species <- function(plotname){
   ggsave(
     plotname,
-    filename = paste(deparse(substitute(plotname)), "_", Soort, "(5).png", sep = ""), 
+    filename = paste(deparse(substitute(plotname)), "_", Soort, "(6).png", sep = ""), 
     path = paste("./graphs/Grafieken ", Soort, sep = ""),
     width = 15, height = 10, units = "cm", dpi = 300)}
 
 f_save_wide_graph_species <- function(plotname){
   ggsave(
     plotname,
-    filename = paste(deparse(substitute(plotname)), "_", Soort, "(5).png", sep = ""), 
+    filename = paste(deparse(substitute(plotname)), "_", Soort, "(6).png", sep = ""), 
     path = paste("./graphs/Grafieken ", Soort, sep = ""),
     width = 18, height = 10, units = "cm", dpi = 300)}
