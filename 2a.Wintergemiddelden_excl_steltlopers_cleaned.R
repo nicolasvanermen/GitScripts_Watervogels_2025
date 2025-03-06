@@ -1,5 +1,6 @@
 library(tidyverse)
 library(INBOtheme)
+library(DBI)
 library(zoo)
 # theme_set(theme_inbo(base_size = 12, transparent = FALSE))
 conflicted::conflict_prefer("filter", "dplyr")
@@ -12,15 +13,39 @@ source("./GitScripts/Functies_WV_grafieken.R")
 ##################
 
 WV_DB <- read_csv("./Data/WV_DB_2025-01-23.csv")
-Gebieden_ZS <- read_csv("./Data/Gebieden2 herwerking Wim.csv")
-### dit is de aangepaste gebieden-file doorgemaild door Wim op 31-01-2025
+WV_DB <- WV_DB %>% rename(LocationWVNaam = Gebied) 
+
+con <- inbodb::connect_inbo_dbase("W0004_00_Waterbirds")
+
+Gebieden_ZS <- dbGetQuery(con,
+                          "select LocationGroupCode
+, LocationGroupNaam
+, LocationGroupTypeCode
+, LocationGroupTypeNaam
+, LocationWVCode
+, LocationWVNaam
+, StartDate
+, EndDate
+from [dbo].[FactLocationGroup]
+where 1 = 1
+AND IsDeleted = 0
+AND LocationGroupCode in ('ZS','ZR','ZSVAL','SEST','WETL','NOH')"
+)
+
+### Gebiedsklasse benoemen:
+Gebieden_ZS <- Gebieden_ZS %>% 
+  mutate(Gebiedsklasse = ifelse(LocationGroupCode %in% c("SEST","WETL"), "Sigmagebied", 
+                                ifelse(LocationGroupCode == "ZSVAL", "Valleigebied",
+                                       if_else(LocationGroupCode %in% c("ZS","ZR"), "Estuarium",
+                                               if_else(LocationGroupCode == "NOH", "Haven", NA)))))
+Gebieden_ZS %>% distinct(LocationGroupCode, Gebiedsklasse)
 
 ### check:
-Gebieden_ZS %>% anti_join(WV_DB, by = c("Gebied")) %>% select(Gebied) %>% pull()
+Gebieden_ZS %>% anti_join(WV_DB, by = c("LocationWVNaam")) %>% select(LocationWVNaam) %>% pull()
 ### geen mismatches: alle gebieden zitten ook in de WV_DB
 
 ### selecteren van de tellingen in de relevante telgebieden
-Tellingen_ZS <- WV_DB %>% right_join(Gebieden_ZS, by = c("Gebied" = "Gebied"))
+Tellingen_ZS <- WV_DB %>% right_join(Gebieden_ZS, by = c("LocationWVNaam"))
 
 ### selecteren periode 1991/92 -> 2023/24; meeuwen worden niet betrokken in de analyse
 Tellingen_ZS <- Tellingen_ZS %>% 
@@ -36,22 +61,22 @@ WV_DB <- WV_DB %>%
   filter(Groep != "Meeuwen en Sternen",
          Telseizoen_num > 1990 & Telseizoen_num < 2024)
 
-Tellingen_ZS %>% 
-  group_by(ProjectCode) %>% summarise(n())
-
-WV_DB %>% 
-  group_by(ProjectCode) %>% summarise(n())
-
-WV_DB %>% filter(Gebied == "Poldercomplex OOSTKERKE") %>% 
-  distinct(NedNaam) %>% 
-  filter(str_detect(NedNaam, "gans")|str_detect(NedNaam, "Gans"))
-### Geen inheemse ganzen! Dit betekent dat de Analysesetkey selectie "F.Analysesetkey in (2, 3, 4)" in 1 beweging
-### de juiste soorten voor de juiste gebieden selecteert; de onderstaande filter op ProjectCode lijkt mij daarom verkeerd!!
-### -> nagevraagd bij Frederic: de filtering op projectcode is idd foutief (in deze context) en wordt bij deze gedeactiveerd:
+# Tellingen_ZS %>%
+#   group_by(ProjectCode) %>% summarise(n())
+# 
+# WV_DB %>%
+#   group_by(ProjectCode) %>% summarise(n())
+# 
+# WV_DB %>% filter(LocationWVNaam == "Poldercomplex OOSTKERKE") %>%
+#   distinct(NedNaam) %>%
+#   filter(str_detect(NedNaam, "gans")|str_detect(NedNaam, "Gans"))
+# ### Geen inheemse ganzen! Dit betekent dat de Analysesetkey selectie "F.Analysesetkey in (2, 3, 4)" in 1 beweging
+# ### de juiste soorten voor de juiste gebieden selecteert; de onderstaande filter op ProjectCode lijkt mij daarom verkeerd!!
+# ### -> nagevraagd bij Frederic: de filtering op projectcode is idd foutief (in deze context) en wordt bij deze gedeactiveerd:
 # WV_DB <- WV_DB %>% filter(ProjectCode %in% c("MIDMA","ZSCH"))
 
 ### check:
-nrow(WV_DB) == 866177
+nrow(WV_DB) == 875963
 nrow(Tellingen_ZS) == 234277
 
 #############################
@@ -88,21 +113,8 @@ Aantallen_per_soort %>%
 # 3 Aantal getelde gebieden
 ##############################
 
-Gebieden_ZS %>% group_by(Sigma, Vallei, Estuarien, NOHaven) %>% summarise(n = n())
-### deze categorieën sluiten elkaar volledig uit
-
-Tellingen_ZS <-  Tellingen_ZS %>% 
-  mutate(Gebiedsklasse = ifelse(Sigma == 1, "Sigmagebied", 
-                                ifelse(Vallei == 1, "Valleigebied",
-                                       if_else(Estuarien == 1, "Estuarium",
-                                               if_else(NOHaven == 1, "Haven", NA)))))
-
 Telseizoen_gebied <- Tellingen_ZS %>% 
-  group_by(Telseizoen_chr, Gebied, Gebiedsklasse) %>% 
-  summarise()
-
-Telseizoen_gebied %>% group_by(Telseizoen_chr, Gebied, Gebiedsklasse) %>% summarise(n = n()) 
-Telseizoen_gebied %>% group_by(Telseizoen_chr, Gebied, Gebiedsklasse) %>% summarise(n = n()) %>% filter(n > 1)
+  distinct(Telseizoen_chr, LocationWVNaam, Gebiedsklasse) 
 
 a1.N_tellingen <- ggplot(Telseizoen_gebied) + geom_bar(aes(x = Telseizoen_chr)) + 
   scale_x_discrete(breaks = seq(from = 1991, to = 2023, by = 2)) +
