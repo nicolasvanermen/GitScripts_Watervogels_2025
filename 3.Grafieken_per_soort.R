@@ -11,22 +11,25 @@ source("./GitScripts/Functies_WV_grafieken.R")
 ##################
 
 WV_DB <- read_csv("./Data/WV_DB_2025-01-23.csv")
-Gebieden_ZS <- read_csv("./Data/Gebieden2 herwerking Wim.csv")
-### dit is de aangepaste gebieden-file doorgemaild door Wim op 31-01-2025
+WV_DB <- WV_DB %>% rename(LocationWVNaam = Gebied) 
+
+Gebieden_ZS <- read_csv("./Data/Gebieden_ZS_2025-03-27.csv")
+Clusters_ZS <- read_csv("./Data/Clusters_ZS_2025-03-27.csv")
+
+### Gebiedsklasse benoemen:
+Gebieden_ZS <- Gebieden_ZS %>% 
+  mutate(Gebiedsklasse = ifelse(LocationGroupCode %in% c("SEST","WETL"), "Sigmagebied", 
+                                ifelse(LocationGroupCode == "ZSVAL", "Valleigebied",
+                                       if_else(LocationGroupCode %in% c("ZS","ZR"), "Estuarium",
+                                               if_else(LocationGroupCode == "NOH", "Haven", NA)))))
+Gebieden_ZS %>% distinct(LocationGroupCode, Gebiedsklasse)
 
 ### check:
-Gebieden_ZS %>% anti_join(WV_DB, by = c("Gebied")) %>% select(Gebied) %>% pull()
+Gebieden_ZS %>% anti_join(WV_DB, by = c("LocationWVNaam")) %>% select(LocationWVNaam) %>% pull()
 ### geen mismatches: alle gebieden zitten ook in de WV_DB
 
 ### selecteren van de tellingen in de relevante telgebieden
-Tellingen_ZS <- WV_DB %>% right_join(Gebieden_ZS, by = c("Gebied" = "Gebied"))
-
-### gebiedsklasse definiëren
-Tellingen_ZS <- Tellingen_ZS %>%
-  mutate(Gebiedsklasse = ifelse(Sigma == 1, "Sigmagebied",
-                                ifelse(Vallei == 1, "Valleigebied",
-                                       if_else(Estuarien == 1, "Estuarium",
-                                               if_else(NOHaven == 1, "Haven", NA)))))
+Tellingen_ZS <- WV_DB %>% right_join(Gebieden_ZS, by = c("LocationWVNaam"))
 
 ### selecteren periode 1991/92 -> 2023/24;
 Tellingen_ZS <- Tellingen_ZS %>% 
@@ -34,11 +37,10 @@ Tellingen_ZS <- Tellingen_ZS %>%
   filter(Groep != "Meeuwen en Sternen",
          Telseizoen_num > 1990 & Telseizoen_num < 2024)
 
-### clustervolgorde aanpassen
-Tellingen_ZS %>% count(Cluster)
-Tellingen_ZS$Cluster <- factor(Tellingen_ZS$Cluster,
-                               levels = c("Burchtse Weel","Dijlemonding","Durme","Kalkense Meersen","KBR","Noordelijk Gebied","Wal-Zwijn","Overige"))
-Tellingen_ZS %>% count(Cluster)
+### tellingen binnen de clusters
+Tellingen_clusters_ZS <- right_join(Tellingen_ZS, 
+                                    Clusters_ZS %>% 
+                                      select(LocationWVNaam, LocationGroupNaam), by = "LocationWVNaam")
 
 ### zelfde selectie voor volledige WV_DB:
 WV_DB <- WV_DB %>% 
@@ -48,7 +50,7 @@ WV_DB <- WV_DB %>%
          # ProjectCode %in% c("MIDMA","ZSCH"))
 
 ### check:
-nrow(WV_DB) == 866177
+nrow(WV_DB) == 875963
 nrow(Tellingen_ZS) == 234277
 
 ### 12 meest algemene soorten
@@ -58,6 +60,20 @@ Species12 <- Tellingen_ZS %>% group_by(NedNaam) %>%
   head(n = 12) %>% pull(NedNaam)
 Species12 <- as.factor(Species12) 
 levels(Species12)
+
+### clustervolgorde aanpassen
+Tellingen_clusters_ZS %>% distinct(LocationGroupNaam.y)
+Tellingen_clusters_ZS <- Tellingen_clusters_ZS %>% rename(Cluster = LocationGroupNaam.y)
+Tellingen_clusters_ZS %>% count(Cluster)
+
+Tellingen_clusters_ZS <- Tellingen_clusters_ZS %>% 
+  mutate(Cluster = as.factor(case_when(str_detect(Cluster, "Kruibeke") ~ "KBR", .default = Cluster)))
+Tellingen_clusters_ZS %>% count(Cluster)
+
+Tellingen_clusters_ZS$Cluster <- factor(Tellingen_clusters_ZS$Cluster,
+                                        levels = c("Burchtse Weel","Dijlemonding","Durme","Kalkense Meersen",
+                                                   "KBR","Noordelijk Gebied","Wal-Zwijn","Overige"))
+
 
 ##########################################
 # 2a Grafieken per soort (zonder Kievit)
@@ -73,6 +89,7 @@ for (i in Species12[!Species12 %in% c("Kievit")])
   ### soortselectie maken
   Tellingen_VL_Soort <- WV_DB %>% filter(NedNaam == Soort)
   Tellingen_ZS_Soort <- Tellingen_ZS %>% filter(NedNaam == Soort)
+  Tellingen_ZS_Cluster_Soort <- Tellingen_clusters_ZS %>% filter(NedNaam == Soort)
   
   ### wintergemiddelden per deelgebied
   Winter_Means_Sigma <- Tellingen_ZS_Soort %>% 
@@ -171,7 +188,7 @@ for (i in Species12[!Species12 %in% c("Kievit")])
   f_save_wide_graph_species(e5.ZS_Wintergemiddelden)
   
   ### wintergemiddelden per cluster binnen Sigmagebieden
-  Winter_Means_Sigma_cluster <- Tellingen_ZS_Soort %>% 
+  Winter_Means_Sigma_cluster <- Tellingen_ZS_Cluster_Soort %>% 
     filter(Gebiedsklasse == "Sigmagebied") %>% 
     group_by(Telseizoen_num, Cluster) %>% 
     summarise(Mean = sum(Aantal)/6) %>%
@@ -206,6 +223,8 @@ for (i in c("Kievit", "Wulp"))
   Tellingen_VL_Soort <- WV_DB %>% filter(NedNaam == Soort,
                                          Telseizoen_num > 1998)
   Tellingen_ZS_Soort <- Tellingen_ZS %>% filter(NedNaam == Soort,
+                                                Telseizoen_num > 1998)
+  Tellingen_ZS_Cluster_Soort <- Tellingen_clusters_ZS %>% filter(NedNaam == Soort,
                                                 Telseizoen_num > 1998)
   
   ### wintergemiddelden per deelgebied
@@ -305,7 +324,7 @@ for (i in c("Kievit", "Wulp"))
   f_save_wide_graph_species(e5.ZS_Wintergemiddelden)
   
   ### wintergemiddelden per cluster binnen Sigmagebieden
-  Winter_Means_Sigma_cluster <- Tellingen_ZS_Soort %>% 
+  Winter_Means_Sigma_cluster <- Tellingen_ZS_Cluster_Soort %>% 
     filter(Gebiedsklasse == "Sigmagebied") %>% 
     group_by(Telseizoen_num, Cluster) %>% 
     summarise(Mean = sum(Aantal)/6) %>%

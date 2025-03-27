@@ -1,6 +1,5 @@
 library(tidyverse)
 library(INBOtheme)
-library(DBI)
 library(zoo)
 # theme_set(theme_inbo(base_size = 12, transparent = FALSE))
 conflicted::conflict_prefer("filter", "dplyr")
@@ -15,22 +14,7 @@ source("./GitScripts/Functies_WV_grafieken.R")
 WV_DB <- read_csv("./Data/WV_DB_2025-01-23.csv")
 WV_DB <- WV_DB %>% rename(LocationWVNaam = Gebied) 
 
-con <- inbodb::connect_inbo_dbase("W0004_00_Waterbirds")
-
-Gebieden_ZS <- dbGetQuery(con,
-                          "select LocationGroupCode
-, LocationGroupNaam
-, LocationGroupTypeCode
-, LocationGroupTypeNaam
-, LocationWVCode
-, LocationWVNaam
-, StartDate
-, EndDate
-from [dbo].[FactLocationGroup]
-where 1 = 1
-AND IsDeleted = 0
-AND LocationGroupCode in ('ZS','ZR','ZSVAL','SEST','WETL','NOH')"
-)
+Gebieden_ZS <- read_csv("./Data/Gebieden_ZS_2025-03-27.csv")
 
 ### Gebiedsklasse benoemen:
 Gebieden_ZS <- Gebieden_ZS %>% 
