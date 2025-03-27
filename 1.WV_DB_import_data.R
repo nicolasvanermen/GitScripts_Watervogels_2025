@@ -51,6 +51,36 @@ WVgroep <- dbGetQuery(con,
                         ,TW.TaxonGroupDescription as Groep
                          FROM DimTaxonWV TW")
 
+Gebieden_ZS <- dbGetQuery(con,
+                          "select LocationGroupCode
+, LocationGroupNaam
+, LocationGroupTypeCode
+, LocationGroupTypeNaam
+, LocationWVCode
+, LocationWVNaam
+, StartDate
+, EndDate
+from [dbo].[FactLocationGroup]
+where 1 = 1
+AND IsDeleted = 0
+AND LocationGroupCode in ('ZS','ZR','ZSVAL','SEST','WETL','NOH')"
+)
+
+Clusters_ZS <- dbGetQuery(con,
+                          "select LocationGroupCode
+, LocationGroupNaam
+, LocationGroupTypeCode
+, LocationGroupTypeNaam
+, LocationWVCode
+, LocationWVNaam
+, StartDate
+, EndDate
+from [dbo].[FactLocationGroup]
+where 1 = 1
+AND IsDeleted = 0
+AND LocationGroupCode in ('BW','DM','DU','KM','KBR','NG','OV','WZ')"
+)
+
 dbDisconnect(con)
 
 ### beetje verkenning:
@@ -81,3 +111,5 @@ WV_DB %>% filter(Groep == "Zwanen") %>% glimpse()
 
 ### export
 # write.csv(WV_DB, paste("./Data/WV_DB_", Sys.Date(), ".csv", sep = ""))
+write.csv(Gebieden_ZS, paste("./Data/Gebieden_ZS_", Sys.Date(), ".csv", sep = ""))
+write.csv(Clusters_ZS, paste("./Data/Clusters_ZS_", Sys.Date(), ".csv", sep = ""))
